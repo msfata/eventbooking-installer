@@ -1,4 +1,3 @@
-$ScriptDir  = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 $AppName    = "EventBooking"
 $JarName    = "EventBooking.jar"
 $InstallDir = "$env:LOCALAPPDATA\$AppName"
