@@ -2,7 +2,8 @@ $ScriptDir  = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $My
 $AppName    = "EventBooking"
 $JarName    = "EventBooking.jar"
 $InstallDir = "$env:LOCALAPPDATA\$AppName"
-$JarSource  = "$ScriptDir\$JarName"
+$JarUrl     = "https://github.com/msfata/eventbooking-installer/raw/main/EventBooking.jar"
+$JarSource  = "$env:TEMP\$JarName"
 $IconSource = "$ScriptDir\app.ico"
 
 # 1. Check Java 21
@@ -28,13 +29,22 @@ if (-not $javaOk) {
                 [System.Environment]::GetEnvironmentVariable("PATH","User")
 }
 
-# 2. Install app
+# 2. Download JAR
+Write-Host "Downloading $AppName..."
+Invoke-WebRequest $JarUrl -OutFile $JarSource
+
+# 3. Install app
+if (-not (Test-Path $JarSource)) {
+    Write-Host "ERROR: Download failed"
+    Start-Sleep 3
+    exit 1
+}
+
 Write-Host "Installing $AppName..."
 if (-not (Test-Path $InstallDir)) { New-Item -ItemType Directory -Path $InstallDir | Out-Null }
 Copy-Item $JarSource -Destination "$InstallDir\$JarName" -Force
-if (Test-Path $IconSource) { Copy-Item $IconSource -Destination "$InstallDir\app.ico" -Force }
 
-# 3. Create launcher bat
+# 4. Create launcher bat
 $launcher = "$InstallDir\launch.bat"
 @"
 @echo off
@@ -42,13 +52,12 @@ cd /d "%~dp0"
 javaw -jar $JarName
 "@ | Set-Content $launcher
 
-# 4. Desktop shortcut
+# 5. Desktop shortcut
 $shell     = New-Object -ComObject WScript.Shell
 $shortcut  = $shell.CreateShortcut("$env:USERPROFILE\Desktop\$AppName.lnk")
 $shortcut.TargetPath       = $launcher
 $shortcut.WorkingDirectory = $InstallDir
 $shortcut.WindowStyle      = 7
-if (Test-Path "$InstallDir\app.ico") { $shortcut.IconLocation = "$InstallDir\app.ico" }
 $shortcut.Save()
 
 Write-Host "Done. Shortcut created on Desktop."
