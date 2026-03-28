@@ -3,7 +3,6 @@ $JarName    = "EventBooking.jar"
 $InstallDir = "$env:LOCALAPPDATA\$AppName"
 $JarUrl     = "https://github.com/msfata/eventbooking-installer/raw/main/EventBooking.jar"
 $JarSource  = "$env:TEMP\$JarName"
-$IconSource = "$ScriptDir\app.ico"
 
 # 1. Check Java 21
 $javaOk = $false
@@ -43,15 +42,32 @@ Write-Host "Installing $AppName..."
 if (-not (Test-Path $InstallDir)) { New-Item -ItemType Directory -Path $InstallDir | Out-Null }
 Copy-Item $JarSource -Destination "$InstallDir\$JarName" -Force
 
-# 4. Create launcher bat
+# 4. Find Java 21 executable explicitly
+$javaExe = "javaw"
+$searchPaths = @(
+    "C:\Program Files\Eclipse Adoptium",
+    "C:\Program Files\Microsoft",
+    "C:\Program Files\Java",
+    "C:\Program Files\OpenJDK"
+)
+foreach ($path in $searchPaths) {
+    if (Test-Path $path) {
+        $found = Get-ChildItem $path -Recurse -Filter "javaw.exe" -ErrorAction SilentlyContinue |
+                 Where-Object { $_.FullName -match "21" } |
+                 Select-Object -First 1
+        if ($found) { $javaExe = $found.FullName; break }
+    }
+}
+
+# 5. Create launcher bat
 $launcher = "$InstallDir\launch.bat"
 @"
 @echo off
 cd /d "%~dp0"
-javaw -jar $JarName
+"$javaExe" -jar $JarName
 "@ | Set-Content $launcher
 
-# 5. Desktop shortcut
+# 6. Desktop shortcut
 $shell     = New-Object -ComObject WScript.Shell
 $shortcut  = $shell.CreateShortcut("$env:USERPROFILE\Desktop\$AppName.lnk")
 $shortcut.TargetPath       = $launcher
